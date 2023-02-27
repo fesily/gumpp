@@ -142,9 +142,22 @@ inline SymHandler &GetSymHandler() {
     void* Process::module_find_symbol_by_name(const char* module_name, const char* symbol_name) {
 #ifndef _WIN32
         Runtime::ref();
-        auto ptr = GSIZE_TO_POINTER(gum_module_find_symbol_by_name(module_name, symbol_name));
+        struct {
+            const char* name;
+            GumAddress address;
+        } ctx {symbol_name, 0};
+        gum_module_enumerate_symbols(module_name,
+         [](const GumSymbolDetails * details,
+                                   gpointer user_data)->gboolean{
+           auto pctx = (decltype(ctx)*)user_data;
+           if (details->address && strcmp(details->name, pctx->name) == 0){
+            pctx->address = details->address;
+            return FALSE;
+           }
+           return TRUE;
+        }, (void*)&ctx);
         Runtime::unref();
-        return ptr;
+        return GSIZE_TO_POINTER(ctx.address);
 #else
 		HMODULE hmod;
 		if (module_name) {
