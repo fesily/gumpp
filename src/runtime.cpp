@@ -2,10 +2,10 @@
 
 #include <frida-gum.h>
 #ifdef HAVE_WINDOWS
-#include <Dbghelp.h>
-#include <windows.h>
 #include <cstdio>
 #include <filesystem>
+#include <windows.h>
+#include <Dbghelp.h>
 #endif
 
 namespace Gum {
