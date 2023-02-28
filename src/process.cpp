@@ -13,6 +13,7 @@
 #pragma comment(lib, "Shlwapi.lib")
 #endif
 
+#include <cassert>
 #include <string>
 #include <string_view>
 #include <filesystem>
@@ -65,6 +66,7 @@ namespace Gum {
 #endif
 
     void* Process::module_find_symbol_by_name(const char* module_name, const char* symbol_name) {
+        assert(module_name != nullptr);
 #ifndef _WIN32
         Runtime::ref();
         struct {
@@ -84,15 +86,7 @@ namespace Gum {
         Runtime::unref();
         return GSIZE_TO_POINTER(ctx.address);
 #else
-		HMODULE hmod;
-		if (module_name) {
-			hmod = LoadLibraryExA(module_name, NULL, DONT_RESOLVE_DLL_REFERENCES);
-		}
-		else {
-			if (!GetModuleHandleEx(0, 0, &hmod)) {
-				return nullptr;
-			}
-		}
+		HMODULE hmod = LoadLibraryExA(module_name, NULL, DONT_RESOLVE_DLL_REFERENCES);
 		if (!hmod)
 			return nullptr;
 
@@ -100,16 +94,7 @@ namespace Gum {
 
 		std::unique_ptr<std::remove_pointer_t<HMODULE>, decltype(&FreeLibrary)> hMod{ hmod, &FreeLibrary };
 
-		std::string moduleName;
-		if (!module_name) {
-			char path[MAX_PATH];
-			if (GetModuleFileNameA(0, path, sizeof(path)) == 0){
-				return nullptr;
-			}
-			moduleName = std::filesystem::path(path).filename().replace_extension().string();
-		}else {
-			moduleName = std::filesystem::path(module_name).filename().replace_extension().string();
-		}
+        auto moduleName = std::filesystem::path(module_name).filename().replace_extension().string();
 
 		std::unique_ptr<char[]> pattern;
 		size_t len = 0;
@@ -140,5 +125,8 @@ namespace Gum {
 			}, (void*)&ctx, 1);
 		return result;
 #endif
+    }
+    void* Process::module_find_export_by_name(const char* module_name, const char* symbol_name) {
+        return GSIZE_TO_POINTER(gum_module_find_export_by_name(module_name, symbol_name));
     }
 }
