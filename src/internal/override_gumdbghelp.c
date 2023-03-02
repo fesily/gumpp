@@ -5,13 +5,14 @@
  * Licence: wxWindows Library Licence, Version 3.1
  */
 #ifdef _WIN32
+#include <Windows.h>
+#include <DbgHelp.h>
+#pragma comment(lib, "Dbghelp.lib")
+
 #include "frida-gum.h"
 typedef void (*GumDestructorFunc)(void);
 GUM_API void _gum_register_destructor(GumDestructorFunc destructor);
 
-#include <DbgHelp.h>
-#include <Windows.h>
-#pragma comment(lib, "Dbghelp.lib")
 struct _GumDbghelpImplPrivate {
   HMODULE module;
 };
