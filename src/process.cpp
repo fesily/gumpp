@@ -6,8 +6,8 @@
 #include "string.hpp"
 
 #ifdef _WIN32
-#include <DbgHelp.h>
 #include <Windows.h>
+#include <DbgHelp.h>
 #include <shlwapi.h>
 #pragma comment(lib, "dbghelp.lib")
 #pragma comment(lib, "Shlwapi.lib")

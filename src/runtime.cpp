@@ -2,8 +2,8 @@
 
 #include <frida-gum.h>
 #ifdef HAVE_WINDOWS
-#include <Dbghelp.h>
 #include <windows.h>
+#include <Dbghelp.h>
 #include <cstdio>
 #include <filesystem>
 #endif
