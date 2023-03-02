@@ -2,10 +2,10 @@
 
 #include <frida-gum.h>
 #ifdef HAVE_WINDOWS
+#include <Dbghelp.h>
+#include <windows.h>
 #include <cstdio>
 #include <filesystem>
-#include <windows.h>
-#include <Dbghelp.h>
 #endif
 
 namespace Gum {
@@ -116,8 +116,10 @@ void Runtime::unref() {}
 #else
 
 void Runtime::ref() {
-  if (g_atomic_int_add(&ref_count, 1) == 0)
+  if (g_atomic_int_add(&ref_count, 1) == 0) {
+    g_atomic_int_inc(&ref_count);
     init();
+  }
 }
 
 void Runtime::unref() {

@@ -7,31 +7,17 @@
 
 #include <cstring>
 
-namespace Gum
-{
-  class StringImpl : public PodWrapper<StringImpl, String, gchar>
-  {
-  public:
-    StringImpl (gchar * str)
-    {
-      assign_handle (str);
-    }
+namespace Gum {
+class StringImpl : public PodWrapper<StringImpl, String, gchar> {
+ public:
+  StringImpl(gchar* str) { assign_handle(str); }
 
-    virtual ~StringImpl ()
-    {
-      g_free (handle);
-    }
+  virtual ~StringImpl() { g_free(handle); }
 
-    virtual const char * c_str ()
-    {
-      return handle;
-    }
+  virtual const char* c_str() { return handle; }
 
-    virtual size_t length () const
-    {
-      return strlen (handle);
-    }
-  };
-}
+  virtual size_t length() const { return strlen(handle); }
+};
+}  // namespace Gum
 
 #endif
