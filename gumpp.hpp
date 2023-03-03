@@ -221,8 +221,19 @@ class RefPtr {
   T* ptr;
 };
 struct ModuleDetails;
+struct DebugSymbolDetails {
+  virtual ~DebugSymbolDetails() = default;
+  virtual void* address() const = 0;
+  virtual const char* module_name() const = 0;
+  virtual const char* symbol_name() const = 0;
+  virtual const char* file_name() const = 0;
+  virtual uint32_t line_number() const = 0;
+  virtual uint32_t column() const = 0;
+};
+
 class SymbolUtil {
  public:
+  static std::unique_ptr<DebugSymbolDetails> details_from_address(void* addr);
   static void* find_function(const char* name) {
     return find_function_ptr(name);
   }

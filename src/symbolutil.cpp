@@ -39,4 +39,23 @@ RefPtr<String> get_function_name_from_addr(void* addr) {
   Runtime::unref();
   return {new StringImpl(name)};
 }
+
+struct DebugSymbolDetailsImpl : DebugSymbolDetails {
+  GumDebugSymbolDetails details;
+  virtual ~DebugSymbolDetailsImpl() = default;
+  virtual void* address() const { return GSIZE_TO_POINTER(details.address); }
+  virtual const char* module_name() const { return details.module_name; }
+  virtual const char* symbol_name() const { return details.symbol_name; }
+  virtual const char* file_name() const { return details.file_name; }
+  virtual uint32_t line_number() const { return details.line_number; }
+  virtual uint32_t column() const { return details.column; }
+};  // namespace Gum
+
+std::unique_ptr<DebugSymbolDetails> SymbolUtil::details_from_address(void* addr) {
+  auto impl = std::make_unique<DebugSymbolDetailsImpl>();
+  if (!gum_symbol_details_from_address(addr, &impl->details)) {
+    return nullptr;
+  }
+  return impl;
+}
 }  // namespace Gum
