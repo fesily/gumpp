@@ -17,38 +17,33 @@ inline std::string to_hex(uint8_t b) {
   return res;
 }
 
-template <typename inst_t>
-constexpr std::array<char, sizeof(inst_t) * 2 + 1> inst_all_regex() {
-  std::array<char, sizeof(inst_t)* 2 + 1> res = {};
-  for (int i = 0; i < sizeof(inst_t) * 2; ++i) {
-    res[i] = '?';
-  }
-  return res;
-}
-
-static_assert(inst_all_regex<uint32_t>().data() ==
-              std::string_view("????????"));
-
 template <typename T>
 struct signature_handler {
   insn_ptr_t instruction_at(gpointer address) {
     return {T::gum_reader_disassemble_instruction_at((gconstpointer)address),
             [](cs_insn* inst) { cs_free(inst, 1); }};
   }
+
+  size_t inst_length(gpointer address) {
+    return T::inst_length(instruction_at, address);
+  }
+
+  std::string signature_relocator(gpointer address) {
+    return T::signature_relocator(address);
+  }
+
   std::string to_signature_code(void* start_address, size_t limit) {
     using inst_t = uint32_t;
     const auto code_address = gum_malloc(limit);
     memset(code_address, 0, limit);
     const auto writer = T::gum_writer_new(code_address);
     const auto relocator = T::gum_relocator_new(start_address, writer);
-    guint read_offset = 0;
     while (true) {
-      read_offset = T::gum_relocator_read_one(relocator, nullptr);
-      read_offset /= sizeof(inst_t);
+      T::gum_relocator_read_one(relocator, nullptr);
       if (T::gum_relocator_eob(relocator) && T::gum_relocator_eoi(relocator)) {
         break;
       }
-      if (read_offset >= limit)
+      if (--limit <= 0)
         break;
     }
     std::string output;
@@ -56,20 +51,20 @@ struct signature_handler {
     guint count = 0;
     guint offset = T::gum_writer_offset(writer);
     gpointer pc = T::gum_writer_cur(writer);
+    inst_t* old_address = (inst_t*)start_address;
     while (T::gum_relocator_write_one(relocator)) {
+      auto target_address = (inst_t*)pc;
       guint new_offset = T::gum_writer_offset(writer);
       gpointer new_pc = T::gum_writer_cur(writer);
-      if (new_offset - offset != sizeof(inst_t)) {
+      auto old_inst_length = inst_length(old_address);
+      if (new_offset - offset != old_inst_length) {
         // 说明这个指令重写为多条,直接使用??????替换掉
         // TODO:应该提取这个指令的固定部分,但是需要按半个字节固定才行
-        output.append(inst_all_regex<inst_t>().data());
+        output.append(signature_relocator(old_address));
       } else {
         // 这个指令有没有重写为多条, 判断是不是重写过指令
-        auto target_address = (inst_t*)pc;
-        auto* ptr =
-            (inst_t*)((uintptr_t)start_address + count * sizeof(inst_t));
-        if (memcmp(ptr, target_address, sizeof(inst_t)) != 0) {
-          auto old_inst = instruction_at((inst_t*)ptr);
+        if (memcmp(ptr, target_address, old_inst_length) != 0) {
+          auto old_inst = instruction_at((inst_t*)old_address);
           auto new_inst = instruction_at((inst_t*)target_address);
           g_assert_cmpuint(old_inst->size, ==, new_inst->size);
 
@@ -88,6 +83,7 @@ struct signature_handler {
       }
       pc = new_pc;
       offset = new_offset;
+      old_address = (inst_t*)((uintptr_t)old_address + old_inst_length);
       count++;
     }
     g_assert(count > 0);
@@ -112,5 +108,8 @@ class signature_handler_##arch\
       gum_##arch##_relocator_write_one;\
   static constexpr auto& gum_reader_disassemble_instruction_at =\
       gum_##arch##_reader_disassemble_instruction_at;\
+  template<typename Func>
+  size_t inst_length(Func&& fn, gpointer address);
+  std::string signature_relocator(gpointer address, size_t inst_length);
 };
 }
