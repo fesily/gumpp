@@ -298,6 +298,12 @@ class Process {
 
 void runtime_init();
 void runtime_deinit();
+
+std::string to_signature_code(void* start_address, size_t limit);
+std::vector<void*> search_module_function(const char* module_name,
+                                          const char* pattern);
+std::vector<void*> search_module_string(const char* module_name,
+                                        const char* str);
 }  // namespace Gum
 
 #endif
