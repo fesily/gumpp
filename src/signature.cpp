@@ -37,7 +37,9 @@ std::vector<void*> search_module_string(const char* module_name,
                                         const char* str) {
   std::string pattern;
   for (size_t i = 0; i < strlen(str); i++) {
-    pattern += to_hex(str[i]);
+    char res[3] = {};
+    snprintf(res, 3, "%02x", str[i]);
+    pattern.append(res, 2);
   }
   pattern += "00";
   auto match_pattern = gum_match_pattern_new_from_string(pattern.c_str());
