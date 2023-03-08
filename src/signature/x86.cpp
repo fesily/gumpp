@@ -11,7 +11,7 @@ size_t signature_handler_x86::inst_length(Func&& fn, gpointer address){
     return fn(address)->size;
 }
 
-std::string signature_handler_x86::signature_relocator(gpointer address, size_t ){
+std::string signature_handler_x86::signature_relocator(gpointer address, size_t inst_length){
     return std::string(inst_length, 'f');
 }
 

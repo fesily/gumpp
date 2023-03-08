@@ -19,17 +19,17 @@ inline std::string to_hex(uint8_t b) {
 
 template <typename T>
 struct signature_handler {
-  insn_ptr_t instruction_at(gpointer address) {
+  static insn_ptr_t instruction_at(gpointer address) {
     return {T::gum_reader_disassemble_instruction_at((gconstpointer)address),
             [](cs_insn* inst) { cs_free(inst, 1); }};
   }
 
-  size_t inst_length(gpointer address) {
+  static size_t inst_length(gpointer address) {
     return T::inst_length(instruction_at, address);
   }
 
-  std::string signature_relocator(gpointer address) {
-    return T::signature_relocator(address);
+  std::string signature_relocator(gpointer address, size_t inst_length) {
+    return T::signature_relocator(address, inst_length);
   }
 
   std::string to_signature_code(void* start_address, size_t limit) {
@@ -51,7 +51,7 @@ struct signature_handler {
     guint count = 0;
     guint offset = T::gum_writer_offset(writer);
     gpointer pc = T::gum_writer_cur(writer);
-    inst_t* old_address = (inst_t*)start_address;
+    auto old_address = (inst_t*)start_address;
     while (T::gum_relocator_write_one(relocator)) {
       auto target_address = (inst_t*)pc;
       guint new_offset = T::gum_writer_offset(writer);
@@ -60,10 +60,10 @@ struct signature_handler {
       if (new_offset - offset != old_inst_length) {
         // 说明这个指令重写为多条,直接使用??????替换掉
         // TODO:应该提取这个指令的固定部分,但是需要按半个字节固定才行
-        output.append(signature_relocator(old_address));
+        output.append(signature_relocator(old_address, old_inst_length));
       } else {
         // 这个指令有没有重写为多条, 判断是不是重写过指令
-        if (memcmp(ptr, target_address, old_inst_length) != 0) {
+        if (memcmp(old_address, target_address, old_inst_length) != 0) {
           auto old_inst = instruction_at((inst_t*)old_address);
           auto new_inst = instruction_at((inst_t*)target_address);
           g_assert_cmpuint(old_inst->size, ==, new_inst->size);
@@ -76,7 +76,7 @@ struct signature_handler {
             }
           }
         } else {
-          for (auto b : *(std::array<uint8_t, 4>*)(ptr)) {
+          for (auto b : *(std::array<uint8_t, 4>*)(old_address)) {
             output.append(to_hex(b));
           }
         }
@@ -108,8 +108,8 @@ class signature_handler_##arch\
       gum_##arch##_relocator_write_one;\
   static constexpr auto& gum_reader_disassemble_instruction_at =\
       gum_##arch##_reader_disassemble_instruction_at;\
-  template<typename Func>
-  size_t inst_length(Func&& fn, gpointer address);
-  std::string signature_relocator(gpointer address, size_t inst_length);
+  template<typename Func>\
+  static size_t inst_length(Func&& fn, gpointer address);\
+  static std::string signature_relocator(gpointer address, size_t inst_length);\
 };
 }

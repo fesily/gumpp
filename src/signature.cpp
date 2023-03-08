@@ -3,11 +3,6 @@
 #include <string>
 #include <vector>
 namespace Gum {
-inline std::string to_hex(uint8_t b) {
-  char res[3] = {};
-  snprintf(res, 3, "%02x", b);
-  return res;
-}
 
 extern std::string to_signature_code(void* start_address, size_t limit);
 
