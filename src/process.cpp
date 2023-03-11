@@ -141,4 +141,29 @@ void* Process::module_find_export_by_name(const char* module_name,
   return GSIZE_TO_POINTER(
       gum_module_find_export_by_name(module_name, symbol_name));
 }
+
+bool Process::module_load(const char* name, std::string* error) {
+    GError * gerror = NULL;
+    if (gum_module_load(name, &gerror)){
+        return true;
+    }
+    if (error)
+        *error = gerror->message;
+    g_error_free(gerror);
+    return false;
+}
+
+void Process::module_enumerate_export(const char* module_name,const std::function<bool(const ExportDetails& details)>& callback) {
+    struct {
+        decltype(callback) callback;
+    } ctx{callback};
+    gum_module_enumerate_exports(module_name, [](const GumExportDetails* details, gpointer user_data) -> gboolean {
+        auto c = (decltype(ctx)*)user_data;
+        ExportDetails detail;
+        detail.name = details->name;
+        detail.address = GSIZE_TO_POINTER(details->address);
+        detail.type = (ExportType)details->type;
+        return c->callback(detail);;
+    }, (void*)&ctx);
+}
 }  // namespace Gum

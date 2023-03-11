@@ -15,12 +15,18 @@
 
 namespace Gum {
 
-    std::string to_signature_code(void* start_address, size_t limit) {
+    std::string to_signature_pattern(void* start_address, size_t limit) {
+        auto res =
 #ifdef GUMPP_ARCH_ARM64
-        return to_arm64_signature_code(start_address, limit);
+        to_arm64_signature_pattern(start_address, limit);
 #elif GUMPP_ARCH_X86
-        return to_x86_signature_code(start_address, limit);
+        to_x86_signature_pattern(start_address, limit);
 #endif
+        while (res.back() == '?')
+            res.pop_back();
+        while (res.front() == '?')
+            res.erase(res.begin());
+        return res;
     }
 
     static std::vector<void*> search_module_signature_code(const char* module_name,
@@ -60,6 +66,7 @@ namespace Gum {
         }
         pattern += "00";
         auto match_pattern = gum_match_pattern_new_from_string(pattern.c_str());
+        if (!match_pattern) return {};
         auto result =
                 search_module_signature_code(module_name, GUM_PAGE_READ, match_pattern);
         gum_match_pattern_unref(match_pattern);
@@ -69,6 +76,7 @@ namespace Gum {
     std::vector<void*> search_module_function(const char* module_name,
                                               const char* pattern) {
         auto match_pattern = gum_match_pattern_new_from_string(pattern);
+        if (!match_pattern) return {};
         auto result = search_module_signature_code(
                 module_name, GUM_PAGE_EXECUTE | GUM_PAGE_READ, match_pattern);
         gum_match_pattern_unref(match_pattern);

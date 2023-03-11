@@ -8,17 +8,12 @@
 namespace Gum {
     SIGNATURE_HANDLER_(x86)
 
-    template<typename Func>
-    size_t signature_handler_x86::_inst_length(Func&& fn, gpointer address) {
-        return fn(address)->size;
+    std::string signature_handler_x86::_signature_relocator(const cs_insn* insn) {
+        return std::string(insn->size * 2, '?');
     }
 
-    std::string signature_handler_x86::_signature_relocator(gpointer address, size_t inst_length) {
-        return std::string(inst_length, 'f');
-    }
-
-    std::string to_x86_signature_code(void* start_address, size_t limit) {
-        return Gum::signature_handler_x86::to_signature_code(start_address, limit);
+    std::string to_x86_signature_pattern(void* start_address, size_t limit) {
+        return Gum::signature_handler_x86::to_signature_pattern(start_address, limit);
     }
 }
 #endif
