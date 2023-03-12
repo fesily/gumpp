@@ -21,6 +21,8 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <string>
+
 namespace Gum {
     template<typename T>
     class RefPtr;

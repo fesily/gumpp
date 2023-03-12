@@ -4,7 +4,7 @@
 #include <vector>
 #if defined (_M_ARM64) || defined (__aarch64__)
 #define GUMPP_ARCH_ARM64 1
-#elif defined (_M_X64) || defined (__x86_64__)
+#elif defined (_M_X64) || defined (__x86_64__) || defined (_M_IX86) || defined (__i386__)
 #define GUMPP_ARCH_X86 1
 #else
 #error "Unsupported architecture"
