@@ -12,7 +12,8 @@ namespace Gum {
     }
 
     std::string to_arm64_signature_pattern(void* start_address, size_t limit) {
-        return Gum::signature_handler_arm64::to_signature_pattern(start_address, limit);
+        return signature_handler_arm64{}.to_signature_pattern(start_address, limit);
     }
+
 }// namespace Gum
 #endif

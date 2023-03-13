@@ -19,6 +19,19 @@ namespace Gum {
         return res;
     }
 
+	inline std::string to_hex(void* address, size_t inst_length) {
+		std::string output;
+		for (int i = 0; i < inst_length; ++i) {
+			const auto b = ((uint8_t *) address)[i];
+			output.append(to_hex(b));
+		}
+		return output;
+	}
+
+	bool in_memory_range(void *address, const GumMemoryRange& range) {
+		return address >= GSIZE_TO_POINTER(range.base_address) && address < (void*)(range.base_address + range.size);
+	}
+
     template<typename T>
     struct signature_handler {
         static insn_ptr_t instruction_at(gpointer address) {
@@ -26,12 +39,15 @@ namespace Gum {
                     [](cs_insn *inst) { cs_free(inst, 1); }};
         }
 
-        static std::string signature_relocator(const insn_ptr_t& insn) {
-            return T::_signature_relocator(insn.get());
-        }
+		T& get_self(){
+			return *static_cast<T*>(this);
+		}
 
-        template<typename Relocator>
-        static void read_inst(Relocator relocator, size_t limit) {
+        std::string signature_relocator(const insn_ptr_t& insn) {
+            return get_self()._signature_relocator(insn.get());
+        }
+        template<class relocator_t>
+        size_t read_inst(relocator_t relocator, size_t limit) {
             while (true) {
                 T::gum_relocator_read_one(relocator, nullptr);
                 if (T::gum_relocator_eob(relocator) && T::gum_relocator_eoi(relocator)) {
@@ -40,9 +56,10 @@ namespace Gum {
                 if (--limit <= 0)
                     break;
             }
+			return limit;
         }
 
-        static std::string to_signature_pattern(void *start_address, size_t limit) {
+        std::string to_signature_pattern_impl(void *start_address, size_t limit, void** end_address, size_t *scaned_insn_count) {
             using inst_t = uint32_t;
             limit = limit > 100 ? 100 :limit;
             g_assert_cmpuint(limit*16, <, 4096);
@@ -51,7 +68,7 @@ namespace Gum {
             const auto writer = T::gum_writer_new(code_address);
             const auto relocator = T::gum_relocator_new(start_address, writer);
 
-            read_inst(relocator, limit);
+            *scaned_insn_count = limit - read_inst(relocator, limit);
 
             std::string output;
             guint count = 0;
@@ -90,10 +107,7 @@ namespace Gum {
                             }
                         }
                     } else {
-                        for (int i = 0; i < old_inst_length; ++i) {
-                            const auto b = ((uint8_t *) old_address)[i];
-                            output.append(to_hex(b));
-                        }
+						output += to_hex(old_address, old_inst_length);
                     }
                 }
                 pc = new_pc;
@@ -106,14 +120,30 @@ namespace Gum {
             T::gum_relocator_unref(relocator);
             T::gum_writer_unref(writer);
             gum_free(code_address);
+			*end_address = old_address;
             return output;
         }
+
+		std::string to_signature_pattern(void *start_address, size_t limit) {
+			void* end_address = 0;
+			size_t scaned_insn_count = 0;
+			auto pattern = to_signature_pattern_impl(start_address, limit, &end_address, &scaned_insn_count);
+			auto insn = instruction_at(end_address);
+			auto left = limit - scaned_insn_count;
+			if (scaned_insn_count != 0 && left >= 1 && in_function((void*)insn->address))
+					return pattern + to_signature_pattern(end_address, left);
+			return pattern;
+		}
+
+		bool in_function(void* address) {
+			return in_memory_range(address, get_self().range);
+		}
+
     };
 
 #define SIGNATURE_HANDLER_(arch) \
-class signature_handler_##arch\
-    : public signature_handler<signature_handler_##arch> {\
-  friend struct signature_handler<signature_handler_##arch>;\
+struct signature_handler_##arch\
+    : signature_handler<signature_handler_##arch> {\
   static constexpr auto& gum_writer_new = gum_##arch##_writer_new;\
   static constexpr auto& gum_relocator_new = gum_##arch##_relocator_new;\
   static constexpr auto& gum_relocator_read_one = gum_##arch##_relocator_read_one;\
@@ -129,6 +159,7 @@ class signature_handler_##arch\
       gum_##arch##_relocator_unref;\
   static constexpr auto& gum_writer_unref =\
       gum_##arch##_writer_unref;\
-  static std::string _signature_relocator(const cs_insn* insn);\
+  std::string _signature_relocator(const cs_insn* insn);\
+  GumMemoryRange range;\
 };
 }

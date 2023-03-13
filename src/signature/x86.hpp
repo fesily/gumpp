@@ -13,7 +13,7 @@ namespace Gum {
     }
 
     std::string to_x86_signature_pattern(void* start_address, size_t limit) {
-        return Gum::signature_handler_x86::to_signature_pattern(start_address, limit);
+        return Gum::signature_handler_x86{}.to_signature_pattern(start_address, limit);
     }
 }
 #endif
