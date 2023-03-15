@@ -298,6 +298,18 @@ namespace Gum {
         const char* name;
         void* address;
     };
+    enum class ImportType {
+        UNKNOWN,
+        FUNCTION,
+        VARIABLE,
+    };
+    struct ImportDetails {
+        ImportType type;
+        const char* name;
+        const char* module;
+        void* address;
+        void* slot;
+    };
     class Process {
     public:
         static void enumerate_modules(const FoundModuleFunc& func);
@@ -307,6 +319,7 @@ namespace Gum {
         static void* module_find_export_by_name(const char* module_name,
                                                 const char* symbol_name);
         static void module_enumerate_export(const char* module_name, const std::function<bool(const ExportDetails& details)>& callback);
+        static void module_enumerate_import(const char* module_name, const std::function<bool(const ImportDetails& details)>& callback);
     };
 
     void runtime_init();
