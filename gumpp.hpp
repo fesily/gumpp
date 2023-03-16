@@ -310,17 +310,21 @@ namespace Gum {
         void* address;
         void* slot;
     };
-    class Process {
-    public:
-        static void enumerate_modules(const FoundModuleFunc& func);
-        static bool module_load(const char* name, std::string* error);
-        static void* module_find_symbol_by_name(const char* module_name,
-                                                const char* symbol_name);
-        static void* module_find_export_by_name(const char* module_name,
-                                                const char* symbol_name);
-        static void module_enumerate_export(const char* module_name, const std::function<bool(const ExportDetails& details)>& callback);
-        static void module_enumerate_import(const char* module_name, const std::function<bool(const ImportDetails& details)>& callback);
-    };
+    using ProcessId = uint32_t;
+    using ThreadId = size_t;
+    namespace Process {
+        void enumerate_modules(const FoundModuleFunc& func);
+        bool module_load(const char* name, std::string* error);
+        void* module_find_symbol_by_name(const char* module_name,
+                                         const char* symbol_name);
+        void* module_find_export_by_name(const char* module_name,
+                                         const char* symbol_name);
+        void module_enumerate_export(const char* module_name, const std::function<bool(const ExportDetails& details)>& callback);
+        void module_enumerate_import(const char* module_name, const std::function<bool(const ImportDetails& details)>& callback);
+        ProcessId get_id();
+        ThreadId get_current_thread_id();
+    }// namespace Process
+
 
     void runtime_init();
     void runtime_deinit();
