@@ -2,13 +2,13 @@
 #define __GUMPP_HPP__
 
 #if !defined(GUMPP_STATIC) && defined(WIN32)
-#ifdef GUMPP_EXPORTS
-#define GUMPP_API __declspec(dllexport)
+#    ifdef GUMPP_EXPORTS
+#        define GUMPP_API __declspec(dllexport)
+#    else
+#        define GUMPP_API __declspec(dllimport)
+#    endif
 #else
-#define GUMPP_API __declspec(dllimport)
-#endif
-#else
-#define GUMPP_API
+#    define GUMPP_API
 #endif
 
 #define GUMPP_CAPI extern "C" GUMPP_API
@@ -254,21 +254,21 @@ namespace Gum {
         static bool is_public_code(void* addr) {
 #ifdef _WIN32
             uint8_t* byte = (uint8_t*)addr;
-#if defined(_M_AMD64)
+#    if defined(_M_AMD64)
             if (byte[0] == 0xE9 || byte[0] == 0xEB)
                 return true;
             if (byte[0] == 0xFF)
                 if ((byte[1] & 0x07) == 4 || (byte[1] & 0x07) == 5)
                     return true;
-#elif defined(_M_IX86)
+#    elif defined(_M_IX86)
             if (byte[0] == 0xE9 || byte[0] == 0xEA || byte[0] == 0xEB)
                 return true;
             if (byte[0] == 0xFF)
                 if ((byte[1] & 0x07) == 4 || (byte[1] & 0x07) == 5)
                     return true;
-#else
-#error "unsupport"
-#endif
+#    else
+#        error "unsupport"
+#    endif
 #endif
             return false;
         }
@@ -311,6 +311,44 @@ namespace Gum {
         void* address;
         void* slot;
     };
+    enum PageProtection {
+        NO_ACCESS = 0,
+        READ = (1 << 0),
+        WRITE = (1 << 1),
+        EXECUTE = (1 << 2),
+    };
+    struct SymbolSection {
+        const char* id;
+        PageProtection protection;
+    };
+
+    enum SymbolType {
+        /* Common */
+        UNKNOWN,
+        SECTION,
+
+        /* Mach-O */
+        UNDEFINED,
+        ABSOLUTE,
+        PREBOUND_UNDEFINED,
+        INDIRECT,
+
+        /* ELF */
+        OBJECT,
+        FUNCTION,
+        FILE,
+        COMMON,
+        TLS,
+    };
+
+    struct SymbolDetails {
+        bool is_global;
+        SymbolType type;
+        const SymbolSection* section;
+        const char* name;
+        void* address;
+        ssize_t size;
+    };
     using ProcessId = uint32_t;
     using ThreadId = size_t;
     namespace Process {
@@ -320,10 +358,10 @@ namespace Gum {
         void* module_find_export_by_name(const char* module_name, const char* symbol_name);
         void module_enumerate_export(const char* module_name, const std::function<bool(const ExportDetails& details)>& callback);
         void module_enumerate_import(const char* module_name, const std::function<bool(const ImportDetails& details)>& callback);
+        void module_enumerate_symbols(const char* module_name, const std::function<bool(const SymbolDetails& details)>& callback);
         ProcessId get_id();
         ThreadId get_current_thread_id();
-    } // namespace Process
-
+    }  // namespace Process
 
     void runtime_init();
     void runtime_deinit();
@@ -331,6 +369,6 @@ namespace Gum {
     std::string to_signature_pattern(void* start_address, size_t limit);
     std::vector<void*> search_module_function(const char* module_name, const char* pattern);
     std::vector<void*> search_module_string(const char* module_name, const char* str);
-} // namespace Gum
+}  // namespace Gum
 
 #endif
