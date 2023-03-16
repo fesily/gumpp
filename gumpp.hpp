@@ -24,7 +24,7 @@
 #include <string>
 
 namespace Gum {
-    template<typename T>
+    template <typename T>
     class RefPtr;
     struct InvocationContext;
     struct InvocationListener;
@@ -51,20 +51,13 @@ namespace Gum {
     };
 
     struct Interceptor : public Object {
-        virtual bool attach(void* function_address,
-                            InvocationListener* listener,
-                            void* listener_function_data = 0) = 0;
+        virtual bool attach(void* function_address, InvocationListener* listener, void* listener_function_data = 0) = 0;
         virtual void detach(InvocationListener* listener) = 0;
 
-        virtual bool attach(void* function_address,
-                            NoLeaveInvocationListener* listener,
-                            void* listener_function_data = 0) = 0;
+        virtual bool attach(void* function_address, NoLeaveInvocationListener* listener, void* listener_function_data = 0) = 0;
         virtual void detach(NoLeaveInvocationListener* listener) = 0;
 
-        virtual void replace(void* function_address,
-                             void* replacement_address,
-                             void* replacement_data = 0,
-                             void** origin_function = 0) = 0;
+        virtual void replace(void* function_address, void* replacement_address, void* replacement_data = 0, void** origin_function = 0) = 0;
         virtual void revert(void* function_address) = 0;
 
         virtual void begin_transaction() = 0;
@@ -86,13 +79,13 @@ namespace Gum {
 
         virtual void* get_function() const = 0;
 
-        template<typename T>
+        template <typename T>
         T get_nth_argument(unsigned int n) const {
             return reinterpret_cast<T>(get_nth_argument_ptr(n));
         }
         virtual void* get_nth_argument_ptr(unsigned int n) const = 0;
         virtual void replace_nth_argument(unsigned int n, void* value) = 0;
-        template<typename T>
+        template <typename T>
         T get_return_value() const {
             return static_cast<T>(get_return_value_ptr());
         }
@@ -100,24 +93,25 @@ namespace Gum {
 
         virtual unsigned int get_thread_id() const = 0;
 
-        template<typename T>
+        template <typename T>
         T* get_listener_thread_data() const {
             return static_cast<T*>(get_listener_thread_data_ptr(sizeof(T)));
         }
         virtual void* get_listener_thread_data_ptr(size_t required_size) const = 0;
-        template<typename T>
+        template <typename T>
         T* get_listener_function_data() const {
             return static_cast<T*>(get_listener_function_data_ptr());
         }
         virtual void* get_listener_function_data_ptr() const = 0;
-        template<typename T>
+        template <typename T>
         T* get_listener_invocation_data() const {
             return static_cast<T*>(get_listener_invocation_data_ptr(sizeof(T)));
         }
         virtual void* get_listener_invocation_data_ptr(
-                size_t required_size) const = 0;
+            size_t required_size
+        ) const = 0;
 
-        template<typename T>
+        template <typename T>
         T* get_replacement_data() const {
             return static_cast<T*>(get_replacement_data_ptr());
         }
@@ -140,8 +134,7 @@ namespace Gum {
     };
 
     struct Backtracer : public Object {
-        virtual void generate(const CpuContext* cpu_context,
-                              ReturnAddressArray& return_addresses) const = 0;
+        virtual void generate(const CpuContext* cpu_context, ReturnAddressArray& return_addresses) const = 0;
     };
 
     RefPtr<Backtracer> Backtracer_make_accurate();
@@ -164,29 +157,34 @@ namespace Gum {
     };
 
     GUMPP_CAPI bool ReturnAddressDetails_from_address(
-            ReturnAddress address,
-            ReturnAddressDetails& details);
+        ReturnAddress address,
+        ReturnAddressDetails& details
+    );
 
     void* find_function_ptr(const char* str);
     RefPtr<PtrArray> find_matching_functions_array(const char* str);
     RefPtr<String> get_function_name_from_addr(void* addr);
 
-    template<typename T>
+    template <typename T>
     class RefPtr {
     public:
-        RefPtr(T* ptr_) : ptr(ptr_) {}
-        explicit RefPtr(const RefPtr<T>& other) : ptr(other.ptr) {
+        RefPtr(T* ptr_)
+            : ptr(ptr_) {}
+        explicit RefPtr(const RefPtr<T>& other)
+            : ptr(other.ptr) {
             if (ptr)
                 ptr->ref();
         }
 
-        template<class U>
-        RefPtr(const RefPtr<U>& other) : ptr(other.operator->()) {
+        template <class U>
+        RefPtr(const RefPtr<U>& other)
+            : ptr(other.operator->()) {
             if (ptr)
                 ptr->ref();
         }
 
-        RefPtr() : ptr(0) {}
+        RefPtr()
+            : ptr(0) {}
 
         bool is_null() const { return ptr == 0 || ptr->get_handle() == 0; }
 
@@ -240,10 +238,9 @@ namespace Gum {
             return find_function_ptr(name);
         }
 
-        static std::vector<void*> find_matching_functions(const char* str,
-                                                          bool skip_public_code) {
+        static std::vector<void*> find_matching_functions(const char* str, bool skip_public_code) {
             RefPtr<PtrArray> functions =
-                    RefPtr<PtrArray>(find_matching_functions_array(str));
+                RefPtr<PtrArray>(find_matching_functions_array(str));
             std::vector<void*> result;
             result.reserve(functions->length());
             for (int i = functions->length() - 1; i >= 0; i--) {
@@ -256,7 +253,7 @@ namespace Gum {
         }
         static bool is_public_code(void* addr) {
 #ifdef _WIN32
-            uint8_t* byte = (uint8_t*) addr;
+            uint8_t* byte = (uint8_t*)addr;
 #if defined(_M_AMD64)
             if (byte[0] == 0xE9 || byte[0] == 0xEB)
                 return true;
@@ -279,6 +276,10 @@ namespace Gum {
     struct MemoryRange {
         void* base_address;
         size_t size;
+
+        bool contains(void* addr) const noexcept {
+            return addr >= base_address && addr <= (void*)((intptr_t)base_address + size);
+        }
     };
 
     struct ModuleDetails {
@@ -315,25 +316,21 @@ namespace Gum {
     namespace Process {
         void enumerate_modules(const FoundModuleFunc& func);
         bool module_load(const char* name, std::string* error);
-        void* module_find_symbol_by_name(const char* module_name,
-                                         const char* symbol_name);
-        void* module_find_export_by_name(const char* module_name,
-                                         const char* symbol_name);
+        void* module_find_symbol_by_name(const char* module_name, const char* symbol_name);
+        void* module_find_export_by_name(const char* module_name, const char* symbol_name);
         void module_enumerate_export(const char* module_name, const std::function<bool(const ExportDetails& details)>& callback);
         void module_enumerate_import(const char* module_name, const std::function<bool(const ImportDetails& details)>& callback);
         ProcessId get_id();
         ThreadId get_current_thread_id();
-    }// namespace Process
+    } // namespace Process
 
 
     void runtime_init();
     void runtime_deinit();
 
     std::string to_signature_pattern(void* start_address, size_t limit);
-    std::vector<void*> search_module_function(const char* module_name,
-                                              const char* pattern);
-    std::vector<void*> search_module_string(const char* module_name,
-                                            const char* str);
-}// namespace Gum
+    std::vector<void*> search_module_function(const char* module_name, const char* pattern);
+    std::vector<void*> search_module_string(const char* module_name, const char* str);
+} // namespace Gum
 
 #endif
