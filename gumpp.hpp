@@ -23,6 +23,10 @@
 #include <vector>
 #include <string>
 
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
 namespace Gum {
     template<typename T>
     class RefPtr;
