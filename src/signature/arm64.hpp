@@ -7,11 +7,11 @@
 namespace Gum {
     SIGNATURE_HANDLER_(arm64)
 
-    std::string signature_handler_arm64::_signature_relocator(const cs_insn* insn) {
+    std::string signature_handler_arm64::_signature_relocator(const cs_insn *insn) {
         return std::string(insn->size * 2, '?');
     }
 
-    std::string to_arm64_signature_pattern(void* start_address, size_t limit) {
+    std::string to_arm64_signature_pattern(void *start_address, size_t limit) {
         return signature_handler_arm64{}.to_signature_pattern(start_address, limit);
     }
 

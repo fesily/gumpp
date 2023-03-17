@@ -8,12 +8,12 @@
 namespace Gum {
     SIGNATURE_HANDLER_(x86)
 
-    std::string signature_handler_x86::_signature_relocator(const cs_insn* insn) {
+    std::string signature_handler_x86::_signature_relocator(const cs_insn *insn) {
         return std::string(insn->size * 2, '?');
     }
 
-    std::string to_x86_signature_pattern(void* start_address, size_t limit) {
+    std::string to_x86_signature_pattern(void *start_address, size_t limit) {
         return Gum::signature_handler_x86{}.to_signature_pattern(start_address, limit);
     }
-}
+}// namespace Gum
 #endif
