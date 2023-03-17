@@ -368,7 +368,7 @@ namespace Gum {
 
     std::string to_signature_pattern(void* start_address, size_t limit);
     std::vector<void*> search_module_function(const char* module_name, const char* pattern);
-    std::vector<void*> search_module_string(const char* module_name, const char* str);
+    std::vector<const char*> search_module_string(const char* module_name, const char* str);
 }  // namespace Gum
 
 #endif
