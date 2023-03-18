@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <gumpp.hpp>
+
 namespace Gum {
     using insn_ptr_t = std::unique_ptr<cs_insn, void (*)(cs_insn *)>;
 
@@ -28,12 +30,9 @@ namespace Gum {
         return output;
     }
 
-    bool in_memory_range(void *address, const GumMemoryRange &range) {
-        return address >= GSIZE_TO_POINTER(range.base_address) && address < (void *) (range.base_address + range.size);
-    }
-
     template<typename T>
     struct signature_handler {
+        MemoryRange range;
         static insn_ptr_t instruction_at(gpointer address) {
             return {T::gum_reader_disassemble_instruction_at((gconstpointer) address),
                     [](cs_insn *inst) { cs_free(inst, 1); }};
@@ -136,8 +135,8 @@ namespace Gum {
             return pattern;
         }
 
-        bool in_function(void *address) {
-            return in_memory_range(address, get_self().range);
+        bool in_function(void *address) const {
+            return range.contains(address);
         }
     };
 
@@ -160,6 +159,5 @@ namespace Gum {
         static constexpr auto &gum_writer_unref =                                        \
                 gum_##arch##_writer_unref;                                               \
         std::string _signature_relocator(const cs_insn *insn);                           \
-        GumMemoryRange range;                                                            \
     };
 }// namespace Gum
