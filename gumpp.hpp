@@ -22,7 +22,7 @@
 #include <memory>
 #include <vector>
 #include <string>
-
+#include <optional>
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
@@ -163,7 +163,6 @@ namespace Gum {
             ReturnAddress address,
             ReturnAddressDetails &details);
 
-    void *find_function_ptr(const char *str);
     RefPtr<PtrArray> find_matching_functions_array(const char *str);
     RefPtr<String> get_function_name_from_addr(void *addr);
 
@@ -232,28 +231,12 @@ namespace Gum {
         virtual uint32_t line_number() const = 0;
         virtual uint32_t column() const = 0;
     };
-
-    class SymbolUtil {
-    public:
-        static std::unique_ptr<DebugSymbolDetails> details_from_address(void *addr);
-        static void *find_function(const char *name) {
-            return find_function_ptr(name);
-        }
-
-        static std::vector<void *> find_matching_functions(const char *str, bool skip_public_code) {
-            RefPtr<PtrArray> functions =
-                    RefPtr<PtrArray>(find_matching_functions_array(str));
-            std::vector<void *> result;
-            result.reserve(functions->length());
-            for (int i = functions->length() - 1; i >= 0; i--) {
-                auto addr = functions->nth(i);
-                if (!skip_public_code || !is_public_code(addr))
-                    result.push_back(addr);
-            }
-
-            return result;
-        }
-        static bool is_public_code(void *addr) {
+    struct MemoryRange;
+    namespace SymbolUtil {
+        std::unique_ptr<DebugSymbolDetails> details_from_address(void *addr);
+        std::optional<MemoryRange> function_range_from_address(void *addr);
+        void *find_function_end(void *addr, size_t max_size);
+        inline bool is_public_code(void *addr) {
 #ifdef _WIN32
             uint8_t *byte = (uint8_t *) addr;
 #if defined(_M_AMD64)
@@ -274,7 +257,22 @@ namespace Gum {
 #endif
             return false;
         }
-    };
+        void *find_function(const char *name);
+
+        inline std::vector<void *> find_matching_functions(const char *str, bool skip_public_code) {
+            RefPtr<PtrArray> functions =
+                    RefPtr<PtrArray>(find_matching_functions_array(str));
+            std::vector<void *> result;
+            result.reserve(functions->length());
+            for (int i = functions->length() - 1; i >= 0; i--) {
+                auto addr = functions->nth(i);
+                if (!skip_public_code || !is_public_code(addr))
+                    result.push_back(addr);
+            }
+
+            return result;
+        }
+    };// namespace SymbolUtil
     struct MemoryRange {
         void *base_address;
         size_t size;
@@ -373,7 +371,7 @@ namespace Gum {
         int8_t offset;
     };
 
-    signature get_function_signature(void *start_address, size_t limit);
+    signature get_function_signature(void *start_address, int limit);
     std::vector<void *> search_module_function(const char *module_name, const char *pattern);
     std::vector<const char *> search_module_string(const char *module_name, const char *str);
 }// namespace Gum

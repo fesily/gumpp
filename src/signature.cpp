@@ -17,13 +17,24 @@
 
 namespace Gum {
 
-    signature get_function_signature(void *start_address, size_t limit) {
-        auto pattern =
+    signature get_function_signature(void *start_address, int limit) {
+
 #ifdef GUMPP_ARCH_ARM64
-                to_arm64_signature_pattern(start_address, limit);
+        constexpr auto insn_max_size = 4;
+        signature_handler_arm64 handler;
 #elif GUMPP_ARCH_X86
-                to_x86_signature_pattern(start_address, limit);
+        constexpr auto insn_max_size = 15;
+        signature_handler_x86 handler;
 #endif
+        if (auto end = (uint8_t *) SymbolUtil::find_function_end(start_address, limit * insn_max_size)) {
+            handler.range.base_address = start_address;
+            handler.range.size = end - (uint8_t *) start_address;
+        } else {
+            handler.range = SymbolUtil::function_range_from_address(start_address).value_or(MemoryRange{});
+        }
+
+        auto pattern = handler.to_signature_pattern(start_address, limit);
+
         int8_t offset = 0;
         auto size = pattern.size();
         while (size >= 2 && pattern[size - 1] == '?' && pattern[size - 2] == '?') {

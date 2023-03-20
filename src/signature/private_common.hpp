@@ -124,7 +124,7 @@ namespace Gum {
             return output;
         }
 
-        std::string to_signature_pattern(void *start_address, size_t limit) {
+        std::string to_signature_pattern(void *start_address, int limit) {
             void *end_address = 0;
             size_t scaned_insn_count = 0;
             auto pattern = to_signature_pattern_impl(start_address, limit, &end_address, &scaned_insn_count);
