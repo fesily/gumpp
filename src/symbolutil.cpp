@@ -81,7 +81,7 @@ namespace Gum {
                         return true;
                     },
                     (void *) &ctx);
-            return MemoryRange{GSIZE_TO_POINTER(ctx.address), ctx.next_symbol - ctx.address};
+            return MemoryRange{GSIZE_TO_POINTER(ctx.address), size_t(ctx.next_symbol - ctx.address)};
         }
 
         void *find_function_end(void *addr, size_t max_size) {

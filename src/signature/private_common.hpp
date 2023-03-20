@@ -46,7 +46,7 @@ namespace Gum {
             return get_self()._signature_relocator(insn.get());
         }
         template<class relocator_t>
-        size_t read_inst(relocator_t relocator, size_t limit) {
+        int read_inst(relocator_t relocator, int limit) {
             while (true) {
                 T::gum_relocator_read_one(relocator, nullptr);
                 if (T::gum_relocator_eob(relocator) && T::gum_relocator_eoi(relocator)) {
@@ -58,7 +58,7 @@ namespace Gum {
             return limit;
         }
 
-        std::string to_signature_pattern_impl(void *start_address, size_t limit, void **end_address, size_t *scaned_insn_count) {
+        std::string to_signature_pattern_impl(void *start_address, int limit, void **end_address, int *scaned_insn_count) {
             using inst_t = uint32_t;
             limit = limit > 100 ? 100 : limit;
             g_assert_cmpuint(limit * 16, <, 4096);
@@ -126,7 +126,7 @@ namespace Gum {
 
         std::string to_signature_pattern(void *start_address, int limit) {
             void *end_address = 0;
-            size_t scaned_insn_count = 0;
+            int scaned_insn_count = 0;
             auto pattern = to_signature_pattern_impl(start_address, limit, &end_address, &scaned_insn_count);
             auto insn = instruction_at(end_address);
             auto left = limit - scaned_insn_count;
