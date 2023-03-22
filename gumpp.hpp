@@ -207,6 +207,8 @@ namespace Gum {
 
         operator T *() { return ptr; }
 
+        T *get() const { return ptr; }
+
         static void swap(RefPtr &a, RefPtr &b) {
             T *tmp = a.ptr;
             a.ptr = b.ptr;
