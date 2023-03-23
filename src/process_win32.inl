@@ -21,7 +21,7 @@ typedef BOOL(CALLBACK *PF_DETOUR_IMPORT_FUNC_CALLBACK_EX)(_In_opt_ PVOID pContex
                                                           _In_opt_ PVOID *ppvFunc);
 
 static inline PBYTE RvaAdjust(_Pre_notnull_ PIMAGE_DOS_HEADER pDosHeader, _In_ DWORD raddr) {
-    if (raddr != NULL) {
+    if (raddr != 0) {
         return ((PBYTE) pDosHeader) + raddr;
     }
     return NULL;

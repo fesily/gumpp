@@ -311,7 +311,7 @@ namespace Gum {
         const char *name;
         const char *module;
         void *address;
-        void *slot;
+        void **slot;
     };
     enum PageProtection {
         NO_ACCESS = 0,

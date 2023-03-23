@@ -180,6 +180,30 @@ namespace Gum {
         void module_enumerate_import(
                 const char *module_name,
                 const std::function<bool(const ImportDetails &details)> &callback) {
+
+#ifdef _WIN32
+            struct {
+                decltype(callback) callback;
+                const char *current_file_name;
+            } ctx{callback};
+            auto hmod = GetModuleHandleA(module_name);
+            if (!hmod) return;
+            DetourEnumerateImportsEx(
+                    hmod, (void *) &ctx, [](void *pContext, HMODULE hModule, LPCSTR pszFile) -> BOOL {
+                        auto c = (decltype(ctx) *) pContext;
+                        c->current_file_name = pszFile;
+                        return true; },
+                    [](PVOID pContext, DWORD nOrdinal, LPCSTR pszFunc, PVOID *ppvFunc) -> BOOL {
+                        auto c = (decltype(ctx) *) pContext;
+                        ImportDetails details;
+                        details.type = ImportType::UNKNOWN;
+                        details.name = pszFunc;
+                        details.module = c->current_file_name;
+                        details.address = GSIZE_TO_POINTER(gum_module_find_export_by_name(c->current_file_name, pszFunc));
+                        details.slot = ppvFunc;
+                        return c->callback(details);
+                    });
+#else
             struct {
                 decltype(callback) callback;
             } ctx{callback};
@@ -196,6 +220,7 @@ namespace Gum {
                         return c->callback(detail);
                     },
                     (void *) &ctx);
+#endif
         }
 
         void module_enumerate_symbols(
