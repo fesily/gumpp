@@ -10,6 +10,15 @@
 //  Module enumeration functions.
 //
 #ifdef _WIN32
+typedef BOOL(CALLBACK *PF_DETOUR_IMPORT_FILE_CALLBACK)(_In_opt_ PVOID pContext,
+                                                       _In_opt_ HMODULE hModule,
+                                                       _In_opt_ LPCSTR pszFile);
+
+// Same as PF_DETOUR_IMPORT_FUNC_CALLBACK but extra indirection on last parameter.
+typedef BOOL(CALLBACK *PF_DETOUR_IMPORT_FUNC_CALLBACK_EX)(_In_opt_ PVOID pContext,
+                                                          _In_ DWORD nOrdinal,
+                                                          _In_opt_ LPCSTR pszFunc,
+                                                          _In_opt_ PVOID *ppvFunc);
 
 HMODULE WINAPI DetourGetContainingModule(_In_ PVOID pvAddr) {
     MEMORY_BASIC_INFORMATION mbi;
