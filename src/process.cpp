@@ -219,7 +219,7 @@ namespace Gum {
                         detail.name = details->name;
                         detail.module = details->module;
                         detail.address = GSIZE_TO_POINTER(details->address);
-                        detail.slot = GSIZE_TO_POINTER(details->slot);
+                        detail.slot = (void **) GSIZE_TO_POINTER(details->slot);
                         return c->callback(detail);
                     },
                     (void *) &ctx);
