@@ -188,21 +188,24 @@ namespace Gum {
             } ctx{callback};
             auto hmod = GetModuleHandleA(module_name);
             if (!hmod) return;
-            DetourEnumerateImportsEx(
-                    hmod, (void *) &ctx, [](void *pContext, HMODULE hModule, LPCSTR pszFile) -> BOOL {
-                        auto c = (decltype(ctx) *) pContext;
-                        c->current_file_name = pszFile;
-                        return true; },
-                    [](PVOID pContext, DWORD nOrdinal, LPCSTR pszFunc, PVOID *ppvFunc) -> BOOL {
-                        auto c = (decltype(ctx) *) pContext;
-                        ImportDetails details;
-                        details.type = ImportType::UNKNOWN;
-                        details.name = pszFunc;
-                        details.module = c->current_file_name;
-                        details.address = GSIZE_TO_POINTER(gum_module_find_export_by_name(c->current_file_name, pszFunc));
-                        details.slot = ppvFunc;
-                        return c->callback(details);
-                    });
+            auto file_cb = [](void *pContext, LPCSTR pszFile) -> BOOL {
+                auto c = (decltype(ctx) *) pContext;
+                c->current_file_name = pszFile;
+                return true;
+            };
+            auto func_cb = [](PVOID pContext, DWORD nOrdinal, LPCSTR pszFunc, PVOID *ppvFunc) -> BOOL {
+                if (!pszFunc || !ppvFunc) return true;
+                auto c = (decltype(ctx) *) pContext;
+                ImportDetails details;
+                details.type = ImportType::UNKNOWN;
+                details.name = pszFunc;
+                details.module = c->current_file_name;
+                details.address = GSIZE_TO_POINTER(gum_module_find_export_by_name(c->current_file_name, pszFunc));
+                details.slot = ppvFunc;
+                return c->callback(details);
+            };
+            DetourEnumerateImportsEx(hmod, (void *) &ctx, file_cb, func_cb);
+            DetourEnumerateDelayLoadImportsEx(hmod, (void *) &ctx, file_cb, func_cb);
 #else
             struct {
                 decltype(callback) callback;
