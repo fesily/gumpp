@@ -6,11 +6,12 @@
 #include "string.hpp"
 
 #ifdef _WIN32
-#    include <Windows.h>
-#    include <DbgHelp.h>
-#    include <shlwapi.h>
-#    pragma comment(lib, "dbghelp.lib")
-#    pragma comment(lib, "Shlwapi.lib")
+#include <Windows.h>
+#include <DbgHelp.h>
+#include <shlwapi.h>
+#pragma comment(lib, "dbghelp.lib")
+#pragma comment(lib, "Shlwapi.lib")
+#include "process_win32.inl"
 #endif
 
 #include <cassert>
@@ -20,33 +21,32 @@
 
 namespace Gum {
     struct ModuleDetailsImpl : ModuleDetails {
-        const GumModuleDetails* details;
+        const GumModuleDetails *details;
 
-        ModuleDetailsImpl(const GumModuleDetails* d)
-            : details { d } {}
+        ModuleDetailsImpl(const GumModuleDetails *d)
+            : details{d} {}
 
         virtual ~ModuleDetailsImpl() = default;
 
-        virtual const char* name() const { return details->name; }
+        virtual const char *name() const { return details->name; }
 
         virtual MemoryRange range() const {
-            return MemoryRange { GSIZE_TO_POINTER(details->range->base_address),
-                                 details->range->size };
+            return MemoryRange{GSIZE_TO_POINTER(details->range->base_address),
+                               details->range->size};
         }
 
-        virtual const char* path() const { return details->path; }
+        virtual const char *path() const { return details->path; }
     };
 
-    void Process::enumerate_modules(const FoundModuleFunc& func) {
+    void Process::enumerate_modules(const FoundModuleFunc &func) {
         Runtime::ref();
         gum_process_enumerate_modules(
-            [](const GumModuleDetails* details, void* p) -> gboolean {
-                const auto func = (FoundModuleFunc*)p;
-                ModuleDetailsImpl impl { details };
-                return (*func)(impl);
-            },
-            (void*)&func
-        );
+                [](const GumModuleDetails *details, void *p) -> gboolean {
+                    const auto func = (FoundModuleFunc *) p;
+                    ModuleDetailsImpl impl{details};
+                    return (*func)(impl);
+                },
+                (void *) &func);
         Runtime::unref();
     }
 
@@ -57,14 +57,14 @@ namespace Gum {
             SymTagData = 7,
             SymTagPublicSymbol = 10,
         };
-#    ifndef SYMFLAG_PUBLIC_CODE
-#        define SYMFLAG_PUBLIC_CODE 0x00400000
-#    endif
+#ifndef SYMFLAG_PUBLIC_CODE
+#define SYMFLAG_PUBLIC_CODE 0x00400000
+#endif
         // skip public code
         if (pSymbol->Flags & SYMFLAG_PUBLIC_CODE) {
             return false;
         }
-        if ((HMODULE)pSymbol->ModBase != hMod) {
+        if ((HMODULE) pSymbol->ModBase != hMod) {
             return false;
         }
 
@@ -73,26 +73,25 @@ namespace Gum {
     }
 #endif
     namespace Process {
-        void* module_find_symbol_by_name(const char* module_name, const char* symbol_name) {
+        void *module_find_symbol_by_name(const char *module_name, const char *symbol_name) {
             assert(module_name != nullptr);
 #ifndef _WIN32
             Runtime::ref();
             struct {
-                const char* name;
+                const char *name;
                 GumAddress address;
-            } ctx { symbol_name, 0 };
+            } ctx{symbol_name, 0};
             gum_module_enumerate_symbols(
-                module_name,
-                [](const GumSymbolDetails* details, gpointer user_data) -> gboolean {
-                    auto pctx = (decltype(ctx)*)user_data;
-                    if (details->address && strcmp(details->name, pctx->name) == 0) {
-                        pctx->address = details->address;
-                        return FALSE;
-                    }
-                    return TRUE;
-                },
-                (void*)&ctx
-            );
+                    module_name,
+                    [](const GumSymbolDetails *details, gpointer user_data) -> gboolean {
+                        auto pctx = (decltype(ctx) *) user_data;
+                        if (details->address && strcmp(details->name, pctx->name) == 0) {
+                            pctx->address = details->address;
+                            return FALSE;
+                        }
+                        return TRUE;
+                    },
+                    (void *) &ctx);
             Runtime::unref();
             return GSIZE_TO_POINTER(ctx.address);
 #else
@@ -100,16 +99,15 @@ namespace Gum {
             if (!hmod)
                 return nullptr;
 
-            void* result = NULL;
+            void *result = NULL;
 
-            std::unique_ptr<std::remove_pointer_t<HMODULE>, decltype(&FreeLibrary)> hMod {
-                hmod, &FreeLibrary
-            };
+            std::unique_ptr<std::remove_pointer_t<HMODULE>, decltype(&FreeLibrary)> hMod{
+                    hmod, &FreeLibrary};
 
             auto moduleName = std::filesystem::path(module_name)
-                                  .filename()
-                                  .replace_extension()
-                                  .string();
+                                      .filename()
+                                      .replace_extension()
+                                      .string();
 
             std::unique_ptr<char[]> pattern;
             size_t len = 0;
@@ -118,41 +116,39 @@ namespace Gum {
             pattern = std::make_unique<char[]>(len);
             snprintf(pattern.get(), len, "%s!%s", moduleName.c_str(), symbol_name);
             ULONG64 buffer[(sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR) + sizeof(ULONG64) - 1) / sizeof(ULONG64)];
-            PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
+            PSYMBOL_INFO pSymbol = (PSYMBOL_INFO) buffer;
 
             pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
             pSymbol->MaxNameLen = MAX_SYM_NAME;
 
             if (SymFromName(proc, pattern.get(), pSymbol)) {
                 if (is_target_symbol(pSymbol, hMod.get())) {
-                    return (void*)pSymbol->Address;
+                    return (void *) pSymbol->Address;
                 }
             }
-            std::tuple<void*&, HMODULE> ctx { result, (HMODULE)hMod.get() };
+            std::tuple<void *&, HMODULE> ctx{result, (HMODULE) hMod.get()};
             SymEnumSymbolsEx(
-                proc, 0, pattern.get(),
-                [](PSYMBOL_INFO pSymInfo, ULONG SymbolSize, PVOID UserContext) -> BOOL {
-                    auto& [result, hMod] = *(decltype(ctx)*)UserContext;
-                    if (is_target_symbol(pSymInfo, hMod)) {
-                        result = (void*)pSymInfo->Address;
-                        return FALSE;
-                    }
-                    return TRUE;
-                },
-                (void*)&ctx, 1
-            );
+                    proc, 0, pattern.get(),
+                    [](PSYMBOL_INFO pSymInfo, ULONG SymbolSize, PVOID UserContext) -> BOOL {
+                        auto &[result, hMod] = *(decltype(ctx) *) UserContext;
+                        if (is_target_symbol(pSymInfo, hMod)) {
+                            result = (void *) pSymInfo->Address;
+                            return FALSE;
+                        }
+                        return TRUE;
+                    },
+                    (void *) &ctx, 1);
             return result;
 #endif
         }
 
-        void* module_find_export_by_name(const char* module_name, const char* symbol_name) {
+        void *module_find_export_by_name(const char *module_name, const char *symbol_name) {
             return GSIZE_TO_POINTER(
-                gum_module_find_export_by_name(module_name, symbol_name)
-            );
+                    gum_module_find_export_by_name(module_name, symbol_name));
         }
 
-        bool module_load(const char* name, std::string* error) {
-            GError* gerror = NULL;
+        bool module_load(const char *name, std::string *error) {
+            GError *gerror = NULL;
             if (gum_module_load(name, &gerror)) {
                 return true;
             }
@@ -163,77 +159,70 @@ namespace Gum {
         }
 
         void module_enumerate_export(
-            const char* module_name,
-            const std::function<bool(const ExportDetails& details)>& callback
-        ) {
+                const char *module_name,
+                const std::function<bool(const ExportDetails &details)> &callback) {
             struct {
                 decltype(callback) callback;
-            } ctx { callback };
+            } ctx{callback};
             gum_module_enumerate_exports(
-                module_name,
-                [](const GumExportDetails* details, gpointer user_data) -> gboolean {
-                    auto c = (decltype(ctx)*)user_data;
-                    ExportDetails detail;
-                    detail.type = (ExportType)details->type;
-                    detail.name = details->name;
-                    detail.address = GSIZE_TO_POINTER(details->address);
-                    return c->callback(detail);
-                    ;
-                },
-                (void*)&ctx
-            );
+                    module_name,
+                    [](const GumExportDetails *details, gpointer user_data) -> gboolean {
+                        auto c = (decltype(ctx) *) user_data;
+                        ExportDetails detail;
+                        detail.type = (ExportType) details->type;
+                        detail.name = details->name;
+                        detail.address = GSIZE_TO_POINTER(details->address);
+                        return c->callback(detail);
+                        ;
+                    },
+                    (void *) &ctx);
         }
-
         void module_enumerate_import(
-            const char* module_name,
-            const std::function<bool(const ImportDetails& details)>& callback
-        ) {
+                const char *module_name,
+                const std::function<bool(const ImportDetails &details)> &callback) {
             struct {
                 decltype(callback) callback;
-            } ctx { callback };
+            } ctx{callback};
             gum_module_enumerate_imports(
-                module_name,
-                [](const GumImportDetails* details, gpointer user_data) -> gboolean {
-                    auto c = (decltype(ctx)*)user_data;
-                    ImportDetails detail;
-                    detail.type = (ImportType)details->type;
-                    detail.name = details->name;
-                    detail.module = details->module;
-                    detail.address = GSIZE_TO_POINTER(details->address);
-                    detail.slot = GSIZE_TO_POINTER(details->slot);
-                    return c->callback(detail);
-                },
-                (void*)&ctx
-            );
+                    module_name,
+                    [](const GumImportDetails *details, gpointer user_data) -> gboolean {
+                        auto c = (decltype(ctx) *) user_data;
+                        ImportDetails detail;
+                        detail.type = (ImportType) details->type;
+                        detail.name = details->name;
+                        detail.module = details->module;
+                        detail.address = GSIZE_TO_POINTER(details->address);
+                        detail.slot = GSIZE_TO_POINTER(details->slot);
+                        return c->callback(detail);
+                    },
+                    (void *) &ctx);
         }
 
         void module_enumerate_symbols(
-            const char* module_name,
-            const std::function<bool(const SymbolDetails& details)>& callback
-        ) {
+                const char *module_name,
+                const std::function<bool(const SymbolDetails &details)> &callback) {
             struct {
                 decltype(callback) callback;
-            } ctx { callback };
+            } ctx{callback};
             gum_module_enumerate_symbols(
-                module_name,
-                [](const GumSymbolDetails* details, gpointer user_data) -> gboolean {
-                    auto c = (decltype(ctx)*)user_data;
-                    SymbolDetails detail;
-                    detail.is_global = details->is_global;
-                    detail.type = (SymbolType)details->type;
-                    SymbolSection section;
-                    if (details->section) {
-                        section.id = details->section->id;
-                        section.protection = (PageProtection)details->section->protection;
-                    }
-                    detail.section = details->section ? &section : nullptr;
-                    detail.name = details->name;
-                    detail.address = GSIZE_TO_POINTER(details->address);
-                    detail.size = details->size;
-                    return c->callback(detail);
-                },
-                (void*)&ctx
-            );
+                    module_name,
+                    [](const GumSymbolDetails *details, gpointer user_data) -> gboolean {
+                        auto c = (decltype(ctx) *) user_data;
+                        SymbolDetails detail;
+                        detail.is_global = details->is_global;
+                        detail.type = (SymbolType) details->type;
+                        SymbolSection section;
+                        if (details->section) {
+                            section.id = details->section->id;
+                            section.protection = (PageProtection) details->section->protection;
+                        }
+                        detail.section = details->section ? &section : nullptr;
+                        detail.name = details->name;
+                        detail.address = GSIZE_TO_POINTER(details->address);
+                        detail.size = details->size;
+                        return c->callback(detail);
+                    },
+                    (void *) &ctx);
         }
 
         ProcessId get_id() {
@@ -243,5 +232,5 @@ namespace Gum {
         ThreadId get_current_thread_id() {
             return gum_process_get_current_thread_id();
         }
-    }  // namespace Process
-}  // namespace Gum
+    }// namespace Process
+}// namespace Gum
