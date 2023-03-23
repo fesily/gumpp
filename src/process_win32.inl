@@ -20,7 +20,14 @@ typedef BOOL(CALLBACK *PF_DETOUR_IMPORT_FUNC_CALLBACK_EX)(_In_opt_ PVOID pContex
                                                           _In_opt_ LPCSTR pszFunc,
                                                           _In_opt_ PVOID *ppvFunc);
 
-HMODULE WINAPI DetourGetContainingModule(_In_ PVOID pvAddr) {
+static inline PBYTE RvaAdjust(_Pre_notnull_ PIMAGE_DOS_HEADER pDosHeader, _In_ DWORD raddr) {
+    if (raddr != NULL) {
+        return ((PBYTE) pDosHeader) + raddr;
+    }
+    return NULL;
+}
+
+static HMODULE WINAPI DetourGetContainingModule(_In_ PVOID pvAddr) {
     MEMORY_BASIC_INFORMATION mbi;
     ZeroMemory(&mbi, sizeof(mbi));
 
@@ -64,10 +71,10 @@ HMODULE WINAPI DetourGetContainingModule(_In_ PVOID pvAddr) {
     }
 }
 
-BOOL WINAPI DetourEnumerateImportsEx(_In_opt_ HMODULE hModule,
-                                     _In_opt_ PVOID pContext,
-                                     _In_opt_ PF_DETOUR_IMPORT_FILE_CALLBACK pfImportFile,
-                                     _In_opt_ PF_DETOUR_IMPORT_FUNC_CALLBACK_EX pfImportFunc) {
+static BOOL WINAPI DetourEnumerateImportsEx(_In_opt_ HMODULE hModule,
+                                            _In_opt_ PVOID pContext,
+                                            _In_opt_ PF_DETOUR_IMPORT_FILE_CALLBACK pfImportFile,
+                                            _In_opt_ PF_DETOUR_IMPORT_FUNC_CALLBACK_EX pfImportFunc) {
     PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER) hModule;
     if (hModule == NULL) {
         pDosHeader = (PIMAGE_DOS_HEADER) GetModuleHandleW(NULL);
