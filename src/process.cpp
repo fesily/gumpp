@@ -143,8 +143,19 @@ namespace Gum {
         }
 
         void *module_find_export_by_name(const char *module_name, const char *symbol_name) {
-            return GSIZE_TO_POINTER(
+            auto address = GSIZE_TO_POINTER(
                     gum_module_find_export_by_name(module_name, symbol_name));
+#ifdef __APPLE__
+            // macos will return imports table? why?
+            gchar *path;
+            if (gum_process_resolve_module_pointer(address, &path, nullptr)) {
+                if (std::string_view(path).find(module_name) == std::string_view::npos) {
+                    address = 0;
+                }
+                g_free(path);
+            }
+#endif
+            return address;
         }
 
         bool module_load(const char *name, std::string *error) {
