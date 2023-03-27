@@ -26,7 +26,11 @@
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
+#ifdef ABSOLUTE
+#undef ABSOLUTE
 #endif
+#endif
+
 namespace Gum {
     template<typename T>
     class RefPtr;
