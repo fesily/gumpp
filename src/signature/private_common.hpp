@@ -23,7 +23,7 @@ namespace Gum {
 
     inline std::string to_hex(void *address, size_t inst_length) {
         std::string output;
-        for (int i = 0; i < inst_length; ++i) {
+        for (size_t i = 0; i < inst_length; ++i) {
             const auto b = ((uint8_t *) address)[i];
             output.append(to_hex(b));
         }

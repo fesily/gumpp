@@ -172,7 +172,7 @@ namespace Gum {
                 const char *module_name,
                 const std::function<bool(const ExportDetails &details)> &callback) {
             struct {
-                decltype(callback) callback;
+                const std::function<bool(const ExportDetails &details)> &callback;
             } ctx{callback};
             gum_module_enumerate_exports(
                     module_name,
@@ -218,7 +218,7 @@ namespace Gum {
             DetourEnumerateDelayLoadImportsEx(hmod, (void *) &ctx, file_cb, func_cb);
 #else
             struct {
-                decltype(callback) callback;
+                const std::function<bool(const ImportDetails &details)> &callback;
             } ctx{callback};
             gum_module_enumerate_imports(
                     module_name,
@@ -240,7 +240,7 @@ namespace Gum {
                 const char *module_name,
                 const std::function<bool(const SymbolDetails &details)> &callback) {
             struct {
-                decltype(callback) callback;
+                const std::function<bool(const SymbolDetails &details)> &callback;
             } ctx{callback};
             gum_module_enumerate_symbols(
                     module_name,
