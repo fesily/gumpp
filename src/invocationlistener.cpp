@@ -269,7 +269,7 @@ namespace Gum {
         GumInvocationListenerInterface *iface =
                 static_cast<GumInvocationListenerInterface *>(g_iface);
 
-        iface->on_enter = gum_invocation_no_enter_listener_proxy_on_leave;
-        iface->on_leave = nullptr;
+        iface->on_enter = nullptr;
+        iface->on_leave = gum_invocation_no_enter_listener_proxy_on_leave;
     }
 }// namespace Gum
