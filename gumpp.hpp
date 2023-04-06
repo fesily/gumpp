@@ -37,6 +37,7 @@ namespace Gum {
     struct InvocationContext;
     struct InvocationListener;
     struct NoLeaveInvocationListener;
+    struct NoEnterInvocationListener;
     struct CpuContext;
     struct ReturnAddressArray;
 
@@ -64,6 +65,9 @@ namespace Gum {
 
         virtual bool attach(void *function_address, NoLeaveInvocationListener *listener, void *listener_function_data = 0) = 0;
         virtual void detach(NoLeaveInvocationListener *listener) = 0;
+
+        virtual bool attach(void *function_address, NoEnterInvocationListener *listener, void *listener_function_data = 0) = 0;
+        virtual void detach(NoEnterInvocationListener *listener) = 0;
 
         virtual void replace(void *function_address, void *replacement_address, void *replacement_data = 0, void **origin_function = 0) = 0;
         virtual void revert(void *function_address) = 0;
@@ -138,6 +142,12 @@ namespace Gum {
         virtual ~NoLeaveInvocationListener() {}
 
         virtual void on_enter(InvocationContext *context) = 0;
+    };
+
+    struct NoEnterInvocationListener {
+        virtual ~NoEnterInvocationListener() {}
+
+        virtual void on_leave(InvocationContext *context) = 0;
     };
 
     struct Backtracer : public Object {
