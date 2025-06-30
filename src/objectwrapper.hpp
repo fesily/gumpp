@@ -9,6 +9,22 @@ class ObjectWrapper : public B {
  public:
   ObjectWrapper() : handle(NULL) {}
 
+  ObjectWrapper(const ObjectWrapper& other) = delete;
+  ObjectWrapper& operator=(const ObjectWrapper& other) = delete;
+
+  ObjectWrapper(ObjectWrapper&& other) noexcept : handle(other.handle) {
+    other.handle = NULL;
+  }
+  ObjectWrapper& operator=(ObjectWrapper&& other) noexcept {
+    if (this != &other) {
+      if (handle) {
+        g_object_weak_unref(G_OBJECT(handle), delete_wrapper, this);
+      }
+      handle = other.handle;
+      other.handle = NULL;
+    }
+    return *this;
+  }
   virtual ~ObjectWrapper() {}
 
   virtual void ref() { g_object_ref(handle); }

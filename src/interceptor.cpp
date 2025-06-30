@@ -42,7 +42,7 @@ namespace Gum {
 
             GumAttachReturn attach_ret = gum_interceptor_attach(
                     handle, function_address, GUM_INVOCATION_LISTENER(proxy->get_handle()),
-                    listener_function_data);
+                    listener_function_data, GumAttachFlags::GUM_ATTACH_FLAGS_NONE);
             return (attach_ret == GUM_ATTACH_OK);
         }
 
@@ -82,7 +82,7 @@ namespace Gum {
 
             GumAttachReturn attach_ret = gum_interceptor_attach(
                     handle, function_address, GUM_INVOCATION_LISTENER(proxy->get_handle()),
-                    listener_function_data);
+                    listener_function_data, GumAttachFlags::GUM_ATTACH_FLAGS_NONE);
             return (attach_ret == GUM_ATTACH_OK);
         }
 
@@ -121,7 +121,7 @@ namespace Gum {
 
             GumAttachReturn attach_ret = gum_interceptor_attach(
                     handle, function_address, GUM_INVOCATION_LISTENER(proxy->get_handle()),
-                    listener_function_data);
+                    listener_function_data, GumAttachFlags::GUM_ATTACH_FLAGS_NONE);
             return (attach_ret == GUM_ATTACH_OK);
         }
 

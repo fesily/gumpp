@@ -72,8 +72,9 @@ namespace Gum {
                 GumAddress address;
                 GumAddress next_symbol;
             } ctx = {details.address, details.address + max_body_size};
+            auto m = gum_process_find_module_by_name(details.module_name);
             gum_module_enumerate_symbols(
-                    details.module_name, [](const GumSymbolDetails *symbol, gpointer user_data) -> gboolean {
+                    m, [](const GumSymbolDetails *symbol, gpointer user_data) -> gboolean {
                         auto &ctx = *reinterpret_cast<function_range_from_address_ctx *>(user_data);
                         if (symbol->address > ctx.address && symbol->address - ctx.address < ctx.next_symbol - ctx.address) {
                             ctx.next_symbol = symbol->address;

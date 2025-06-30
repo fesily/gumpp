@@ -1,4 +1,9 @@
 #pragma once
+#include <Windows.h>
+#include <DbgHelp.h>
+#include <shlwapi.h>
+#pragma comment(lib, "dbghelp.lib")
+#pragma comment(lib, "Shlwapi.lib")
 //////////////////////////////////////////////////////////////////////////////
 //
 //  Module Enumeration Functions (modules.cpp of detours.lib)

@@ -237,7 +237,7 @@ namespace Gum {
     private:
         T *ptr;
     };
-    struct ModuleDetails;
+    struct Module;
     struct DebugSymbolDetails {
         virtual ~DebugSymbolDetails() = default;
         virtual void *address() const = 0;
@@ -298,14 +298,20 @@ namespace Gum {
         }
     };
 
-    struct ModuleDetails {
-        virtual ~ModuleDetails() = default;
-        virtual const char *name() const = 0;
-        virtual MemoryRange range() const = 0;
-        virtual const char *path() const = 0;
+    enum class DependencyType {
+        DEPENDENCY_REGULAR,
+        DEPENDENCY_WEAK,
+        DEPENDENCY_REEXPORT,
+        DEPENDENCY_UPWARD,
     };
 
-    using FoundModuleFunc = std::function<bool(const ModuleDetails &details)>;
+    struct DependencyDetails {
+        const char *name;
+        DependencyType type;
+    };
+
+
+    using FoundModuleFunc = std::function<bool(const Module &m)>;
     enum class ExportType {
         FUNCTION = 1,
         VARIABLE
@@ -333,10 +339,6 @@ namespace Gum {
         WRITE = (1 << 1),
         EXECUTE = (1 << 2),
     };
-    struct SymbolSection {
-        const char *id;
-        PageProtection protection;
-    };
 
     enum SymbolType {
         /* Common */
@@ -356,6 +358,16 @@ namespace Gum {
         COMMON,
         TLS,
     };
+    struct SymbolSection {
+        const char *id;
+        PageProtection protection;
+    };
+    struct SectionDetails {
+        const char *id;
+        const char *name;
+        void *address;
+        size_t size;
+    };
 
     struct SymbolDetails {
         bool is_global;
@@ -365,16 +377,56 @@ namespace Gum {
         void *address;
         ssize_t size;
     };
+
+    struct FileMapping {
+        const char *path;
+        size_t offset;
+        size_t size;
+    };
+    struct RangeDetails {
+        const MemoryRange *range;
+        PageProtection protection;
+        const FileMapping *file;
+    };
+
+    struct MallocRangeDetails {
+        const MemoryRange *range;
+    };
+
+
+    struct Module : public Object {
+        virtual ~Module() = default;
+
+        virtual const char *name() const = 0;
+        virtual MemoryRange range() const = 0;
+        virtual const char *path() const = 0;
+
+        virtual void ensure_initialized() const = 0;
+        virtual void enumerate_imports(const std::function<bool(const ImportDetails &details)> &callback) const = 0;
+        virtual void enumerate_exports(const std::function<bool(const ExportDetails &details)> &callback) const = 0;
+        virtual void enumerate_symbols(const std::function<bool(const SymbolDetails &details)> &callback) const = 0;
+        virtual void enumerate_ranges(PageProtection prot,
+                                      const std::function<bool(const RangeDetails &range)> &callback) const = 0;
+        virtual void enumerate_sections(const std::function<bool(const SectionDetails &section)> &callback) const = 0;
+        virtual void enumerate_dependencies(const std::function<bool(const DependencyDetails &details)> &callback) const = 0;
+        virtual void *find_export_by_name(const char *symbol_name) const = 0;
+        virtual void *find_symbol_by_name(const char *symbol_name) const = 0;
+    };
+
+    Module *module_load(const char *name, std::string *error = nullptr);
+    void *find_global_export_by_name(const char *symbol_name);
+
     using ProcessId = uint32_t;
     using ThreadId = size_t;
     namespace Process {
+        Module *get_main_module();
+        Module *get_libc_module();
+        Module *find_module_by_name(const char *name);
+        Module *find_module_by_address(void *address);
         void enumerate_modules(const FoundModuleFunc &func);
-        bool module_load(const char *name, std::string *error);
-        void *module_find_symbol_by_name(const char *module_name, const char *symbol_name);
-        void *module_find_export_by_name(const char *module_name, const char *symbol_name);
-        void module_enumerate_export(const char *module_name, const std::function<bool(const ExportDetails &details)> &callback);
-        void module_enumerate_import(const char *module_name, const std::function<bool(const ImportDetails &details)> &callback);
-        void module_enumerate_symbols(const char *module_name, const std::function<bool(const SymbolDetails &details)> &callback);
+        void enumerate_ranges(PageProtection prot, const std::function<bool(const RangeDetails &range)> &callback);
+        void enumerate_malloc_ranges(const std::function<bool(const MallocRangeDetails &range)> &callback);
+
         ProcessId get_id();
         ThreadId get_current_thread_id();
     }// namespace Process
@@ -387,9 +439,8 @@ namespace Gum {
         int8_t offset;
     };
 
-    signature get_function_signature(void *start_address, int limit);
-    std::vector<void *> search_module_function(const char *module_name, const char *pattern);
-    std::vector<const char *> search_module_string(const char *module_name, const char *str);
+    std::vector<void *> search_module_function(const Module &m, const char *pattern);
+    std::vector<const char *> search_module_string(const Module &m, const char *str);
 }// namespace Gum
 
 #endif
